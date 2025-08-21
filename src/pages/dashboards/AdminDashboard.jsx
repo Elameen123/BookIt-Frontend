@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import Header from './Header';
-import ReservationManagement from './ReservationManagement';
-import RecentActivity from './RecentActivity';
-import ReviewModal from './ReviewModal';
-import CreateReservationModal from './CreateReservationModal';
-import ConfirmModal from './ConfirmModal';
-import Alert from './Alert';
+import Header from '../components/Header';
+import ReservationManagement from '../components/ReservationManagement';
+import RecentActivity from '../components/RecentActivity';
+import ReviewModal from '../components/ReviewModal';
+import CreateReservationModal from '../components/CreateReservationModal';
+import ConfirmModal from '../components/ConfirmModal';
+import Alert from '../components/Alert';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext'; // Adjust path as needed
-import './AdminDashboard.css'; // Converted from adminDashboard.css
+import { useAuth } from '../../contexts/AuthContext';
+import './AdminDashboard.css';
 
 function AdminDashboard() {
   const navigate = useNavigate();
@@ -31,6 +31,7 @@ function AdminDashboard() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState(null);
   const [confirmAction, setConfirmAction] = useState(null);
+  const [confirmData, setConfirmData] = useState(null); // Added confirmData state
   const [alertMessage, setAlertMessage] = useState('');
   const [filters, setFilters] = useState({
     status: 'all',
@@ -52,7 +53,6 @@ function AdminDashboard() {
   }, [currentUser, loading, navigate, filters]);
 
   const initializeSharedStorage = () => {
-    // Logic from adminDashboard.js
     if (!localStorage.getItem('classroomReservations')) {
       const initialReservations = {
         pending: [],
@@ -65,14 +65,11 @@ function AdminDashboard() {
   };
 
   const loadReservations = () => {
-    // Fetch from API or localStorage, apply filters
     const res = JSON.parse(localStorage.getItem('classroomReservations')) || {};
-    // Apply filters here (placeholder)
     setReservations(res);
   };
 
   const updateStats = () => {
-    // Calculate stats from reservations
     setStats({
       pending: reservations.pending.length,
       approved: reservations.approved.length,
@@ -124,6 +121,7 @@ function AdminDashboard() {
         onClose={() => setShowConfirmModal(false)} 
         onConfirm={() => {}} 
         action={confirmAction}
+        data={confirmData} // Pass confirmData to modal
       />
       {alertMessage && <Alert message={alertMessage} />}
     </div>
