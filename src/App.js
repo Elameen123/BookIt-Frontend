@@ -7,9 +7,9 @@ import Login from '../src/pages/auth/Login';
 import Signup from '../src/pages/auth/SignUp';
 import ForgotPassword from '../src/pages/auth/ForgotPassword';
 
-// Dashboard Components (to be created)
-import UserDashboard from '../src/pages/dashboards/UserDashboard.jsx';
-import AdminDashboard from '../src/pages/dashboards/AdminDashboard.jsx';
+// Dashboard Components
+import UserDashboard from '../src/pages/dashboards/UserDashboard';
+import AdminDashboard from '../src/pages/dashboards/AdminDashboard';
 import FacilityDashboard from '../src/pages/dashboards/FacilityDashboard';
 
 // Loading Component
@@ -27,19 +27,15 @@ import LoadingSpinner from '../src/components/common/LoadingSpinner';
 const ProtectedRoute = ({ children, allowedRoles = [], redirectTo = '/login' }) => {
   const { currentUser, loading } = useAuth();
 
-  // Show loading spinner while checking authentication
   if (loading) {
     return <LoadingSpinner />;
   }
 
-  // Redirect to login if not authenticated
   if (!currentUser) {
     return <Navigate to={redirectTo} replace />;
   }
 
-  // Check role-based access
   if (allowedRoles.length > 0 && !allowedRoles.includes(currentUser.role)) {
-    // Redirect to appropriate dashboard based on user role
     const userDashboard = getUserDashboardPath(currentUser.role);
     return <Navigate to={userDashboard} replace />;
   }
@@ -57,12 +53,10 @@ const ProtectedRoute = ({ children, allowedRoles = [], redirectTo = '/login' }) 
 const PublicRoute = ({ children }) => {
   const { currentUser, loading } = useAuth();
 
-  // Show loading spinner while checking authentication
   if (loading) {
     return <LoadingSpinner />;
   }
 
-  // Redirect authenticated users to their dashboard
   if (currentUser) {
     const userDashboard = getUserDashboardPath(currentUser.role);
     return <Navigate to={userDashboard} replace />;
@@ -127,8 +121,6 @@ function App() {
             />
 
             {/* Protected Routes - Require Authentication */}
-            
-            {/* User Dashboard - Accessible by students and faculty */}
             <Route 
               path="/dashboard" 
               element={
@@ -137,8 +129,6 @@ function App() {
                 </ProtectedRoute>
               } 
             />
-
-            {/* Admin Dashboard - Only accessible by admins */}
             <Route 
               path="/admin/dashboard" 
               element={
@@ -147,8 +137,6 @@ function App() {
                 </ProtectedRoute>
               } 
             />
-
-            {/* Facility Dashboard - Only accessible by facility staff */}
             <Route 
               path="/facility/dashboard" 
               element={
