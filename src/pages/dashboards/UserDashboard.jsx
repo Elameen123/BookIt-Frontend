@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import Header from './components/Header';
-import AvailabilitySearch from './components/AvailabilitySearch';
-import ClassroomsList from './components/ClassroomsList';
-import ReservationsSection from './components/ReservationsSection';
-import ReservationModal from './components/ReservationModal';
-import AvatarModal from './components/AvatarModal';
-import Alert from './components/Alert';
+import { useAuth } from '../src/contexts/AuthContext';
+import Header from '../components/Header';
+import AvailabilitySearch from '../components/AvailabilitySearch';
+import ClassroomsList from '../components/ClassroomsList';
+import ReservationsSection from '../components/ReservationsSection';
+import ReservationModal from '../components/ReservationModal';
+import AvatarModal from '../components/AvatarModal';
+import Alert from '../components/Alert';
 import { useNavigate } from 'react-router-dom';
 import './UserDashboard.css'; // Converted from index.css
 
 function UserDashboard() {
+  const { currentUser, loading } = useAuth();
   const navigate = useNavigate();
-  const [loggedInUser, setLoggedInUser] = useState(null);
-  const [classrooms, setClassrooms] = useState([]); // From getClassroomData()
+  const [classrooms, setClassrooms] = useState([]);
   const [reservations, setReservations] = useState({
     reminders: [],
     pending: [],
@@ -26,44 +27,36 @@ function UserDashboard() {
   const [locationStatus, setLocationStatus] = useState('Showing current availability');
 
   useEffect(() => {
-    // Authentication check
-    const user = JSON.parse(localStorage.getItem('loggedInUser'));
-    if (!user) {
+    if (loading) return;
+    if (!currentUser) {
       navigate('/login');
       return;
     }
-    setLoggedInUser(user);
 
     // Load data
     const classroomData = JSON.parse(localStorage.getItem('classroomData')) || {};
-    setClassrooms(Object.keys(classroomData)); // Adjust based on structure
+    setClassrooms(Object.keys(classroomData));
 
     loadReservations();
     checkRecurrentReminders();
     displayAllClassrooms();
 
-    // Set interval for reminders
     const interval = setInterval(checkRecurrentReminders, 60000);
     return () => clearInterval(interval);
-  }, [navigate]);
+  }, [currentUser, loading, navigate]);
 
   const loadReservations = () => {
-    // Fetch from backend API or localStorage
     const res = JSON.parse(localStorage.getItem('classroomReservations')) || {};
     setReservations(res);
   };
 
   const displayAllClassrooms = (isFiltered = false) => {
-    // Fetch classrooms from API
-    // For now, use placeholder
     setFilterStatus(isFiltered);
     setLocationStatus(isFiltered ? 'Filtered view' : 'Showing current availability');
   };
 
   const checkRecurrentReminders = () => {
-    // Logic to check reminders
-    // Use backend API if available
-    // For now, placeholder
+    // Placeholder
   };
 
   const showAlert = (message) => {
@@ -71,11 +64,11 @@ function UserDashboard() {
     setTimeout(() => setAlertMessage(''), 3000);
   };
 
-  if (!loggedInUser) return null;
+  if (loading || !currentUser) return null;
 
   return (
     <div>
-      <Header user={loggedInUser} onLogout={() => { localStorage.removeItem('loggedInUser'); navigate('/login'); }} onChangeAvatar={() => setShowAvatarModal(true)} />
+      <Header user={currentUser} onLogout={() => navigate('/login')} onChangeAvatar={() => setShowAvatarModal(true)} />
       <div className="dashboard-container">
         <AvailabilitySearch onSearch={displayAllClassrooms} />
         <ClassroomsList classrooms={classrooms} filterStatus={filterStatus} locationStatus={locationStatus} />
