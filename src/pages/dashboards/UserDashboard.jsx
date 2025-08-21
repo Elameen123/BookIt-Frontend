@@ -1,9 +1,91 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react';
+import Header from './components/Header';
+import AvailabilitySearch from './components/AvailabilitySearch';
+import ClassroomsList from './components/ClassroomsList';
+import ReservationsSection from './components/ReservationsSection';
+import ReservationModal from './components/ReservationModal';
+import AvatarModal from './components/AvatarModal';
+import Alert from './components/Alert';
+import { useNavigate } from 'react-router-dom';
+import './UserDashboard.css'; // Converted from index.css
 
-const UserDashboard = () => {
+function UserDashboard() {
+  const navigate = useNavigate();
+  const [loggedInUser, setLoggedInUser] = useState(null);
+  const [classrooms, setClassrooms] = useState([]); // From getClassroomData()
+  const [reservations, setReservations] = useState({
+    reminders: [],
+    pending: [],
+    approved: [],
+    denied: [],
+  });
+  const [showReservationModal, setShowReservationModal] = useState(false);
+  const [showAvatarModal, setShowAvatarModal] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [filterStatus, setFilterStatus] = useState(false);
+  const [locationStatus, setLocationStatus] = useState('Showing current availability');
+
+  useEffect(() => {
+    // Authentication check
+    const user = JSON.parse(localStorage.getItem('loggedInUser'));
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    setLoggedInUser(user);
+
+    // Load data
+    const classroomData = JSON.parse(localStorage.getItem('classroomData')) || {};
+    setClassrooms(Object.keys(classroomData)); // Adjust based on structure
+
+    loadReservations();
+    checkRecurrentReminders();
+    displayAllClassrooms();
+
+    // Set interval for reminders
+    const interval = setInterval(checkRecurrentReminders, 60000);
+    return () => clearInterval(interval);
+  }, [navigate]);
+
+  const loadReservations = () => {
+    // Fetch from backend API or localStorage
+    const res = JSON.parse(localStorage.getItem('classroomReservations')) || {};
+    setReservations(res);
+  };
+
+  const displayAllClassrooms = (isFiltered = false) => {
+    // Fetch classrooms from API
+    // For now, use placeholder
+    setFilterStatus(isFiltered);
+    setLocationStatus(isFiltered ? 'Filtered view' : 'Showing current availability');
+  };
+
+  const checkRecurrentReminders = () => {
+    // Logic to check reminders
+    // Use backend API if available
+    // For now, placeholder
+  };
+
+  const showAlert = (message) => {
+    setAlertMessage(message);
+    setTimeout(() => setAlertMessage(''), 3000);
+  };
+
+  if (!loggedInUser) return null;
+
   return (
-    <div>UserDashboard</div>
-  )
+    <div>
+      <Header user={loggedInUser} onLogout={() => { localStorage.removeItem('loggedInUser'); navigate('/login'); }} onChangeAvatar={() => setShowAvatarModal(true)} />
+      <div className="dashboard-container">
+        <AvailabilitySearch onSearch={displayAllClassrooms} />
+        <ClassroomsList classrooms={classrooms} filterStatus={filterStatus} locationStatus={locationStatus} />
+        <ReservationsSection reservations={reservations} />
+      </div>
+      <ReservationModal show={showReservationModal} onClose={() => setShowReservationModal(false)} onSubmit={() => {}} />
+      <AvatarModal show={showAvatarModal} onClose={() => setShowAvatarModal(false)} onUpload={() => {}} />
+      {alertMessage && <Alert message={alertMessage} />}
+    </div>
+  );
 }
 
-export default UserDashboard
+export default UserDashboard;
