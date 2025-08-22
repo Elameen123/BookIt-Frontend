@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-    import Header from '../components/Header';
-    import ReservationManagement from '../components/ReservationManagement';
-    import RecentActivity from '../components/RecentActivity';
-    import ReviewModal from '../components/ReviewModal';
-    import CreateReservationModal from '../components/CreateReservationModal';
-    import ConfirmModal from '../components/ConfirmModal';
-    import Alert from '../components/Alert';
+    import Header from 'components/Header';
+    import ReservationManagement from 'components/ReservationManagement';
+    import RecentActivity from 'components/RecentActivity';
+    import ReviewModal from 'components/ReviewModal';
+    import CreateReservationModal from 'components/CreateReservationModal';
+    import ConfirmModal from 'components/ConfirmModal';
+    import Alert from 'components/Alert';
     import { useNavigate } from 'react-router-dom';
-    import { useAuth } from '../../contexts/AuthContext'; // Adjusted path
+    import { useAuth } from 'contexts/AuthContext'; // Adjusted path
     import './AdminDashboard.css'; // Same folder
 
     function AdminDashboard() {

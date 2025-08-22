@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-    import { useAuth } from '../../contexts/AuthContext'; // Adjusted path
-    import Header from '../components/Header';
-    import AvailabilitySearch from '../components/AvailabilitySearch';
-    import ClassroomsList from '../components/ClassroomsList';
-    import ReservationsSection from '../components/ReservationsSection';
-    import ReservationModal from '../components/ReservationModal';
-    import AvatarModal from '../components/AvatarModal';
-    import Alert from '../components/Alert';
+    import { useAuth } from 'contexts/AuthContext'; // Adjusted path
+    import Header from 'components/Header';
+    import AvailabilitySearch from 'components/AvailabilitySearch';
+    import ClassroomsList from 'components/ClassroomsList';
+    import ReservationsSection from 'components/ReservationsSection';
+    import ReservationModal from 'components/ReservationModal';
+    import AvatarModal from 'components/AvatarModal';
+    import Alert from 'components/Alert';
     import { useNavigate } from 'react-router-dom';
     import './UserDashboard.css'; // Same folder
 
