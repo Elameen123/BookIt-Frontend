@@ -10,8 +10,9 @@ const AuthContext = createContext(null);
  * Provides authentication state and functions to the application:
  * - Manages user authentication state
  * - Handles login, signup, and logout operations
- * - Auto-refreshes authentication tokens
+ * - Auto-refreshes authentication tokens (backend only)
  * - Provides user information to components
+ * - Falls back to dev mode when backend is unavailable
  * 
  * @param {Object} props - Component props
  * @param {React.ReactNode} props.children - Child components that will have access to auth context
@@ -20,21 +21,45 @@ export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isDevMode, setIsDevMode] = useState(false);
 
   // Initialize auth state on component mount
   useEffect(() => {
     const initializeAuth = async () => {
       const token = localStorage.getItem('authToken');
+      const userData = localStorage.getItem('currentUser');
       
-      if (token) {
+      if (token && userData) {
         try {
+          const user = JSON.parse(userData);
+          
+          // Check if it's a dev mode user
+          if (user.isDevMode) {
+            setCurrentUser(user);
+            setIsDevMode(true);
+            setLoading(false);
+            return;
+          }
+          
+          // Try to verify with backend
           axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
           const response = await axios.get(`${process.env.REACT_APP_API_URL}/auth/profile`);
           setCurrentUser(response.data);
           setupTokenRefresh();
         } catch (error) {
           console.error('Failed to initialize authentication:', error);
-          logout();
+          // Check if stored user is from dev mode
+          try {
+            const user = JSON.parse(userData);
+            if (user.isDevMode) {
+              setCurrentUser(user);
+              setIsDevMode(true);
+            } else {
+              logout();
+            }
+          } catch (parseError) {
+            logout();
+          }
         }
       }
       
@@ -44,12 +69,14 @@ export const AuthProvider = ({ children }) => {
     initializeAuth();
     
     return () => {
-      clearTimeout(window.refreshTimeout);
+      if (window.refreshTimeout) {
+        clearTimeout(window.refreshTimeout);
+      }
     };
   }, []);
 
   /**
-   * Set up token refresh before expiration
+   * Set up token refresh before expiration (backend only)
    */
   const setupTokenRefresh = () => {
     if (window.refreshTimeout) {
@@ -57,7 +84,7 @@ export const AuthProvider = ({ children }) => {
     }
     
     const token = localStorage.getItem('authToken');
-    if (token) {
+    if (token && !isDevMode) {
       try {
         const base64Url = token.split('.')[1];
         const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
@@ -78,9 +105,11 @@ export const AuthProvider = ({ children }) => {
   };
 
   /**
-   * Refresh authentication token
+   * Refresh authentication token (backend only)
    */
   const refreshToken = async () => {
+    if (isDevMode) return; // Skip refresh in dev mode
+    
     try {
       const response = await axios.post(`${process.env.REACT_APP_API_URL}/auth/refresh`);
       const { token } = response.data;
@@ -94,18 +123,17 @@ export const AuthProvider = ({ children }) => {
   };
 
   /**
-   * Log in a user with credentials
-   * @param {string} email - User email
-   * @param {string} password - User password
+   * Log in a user with user object (called from Login component)
+   * @param {Object} user - User object from successful authentication
    */
-  const login = async (email, password) => {
+  const login = async (user) => {
     try {
-      const response = await axios.post(`${process.env.REACT_APP_API_URL}/auth/login`, { email, password });
-      const { access_token, user } = response.data;
-      localStorage.setItem('authToken', access_token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
       setCurrentUser(user);
-      setupTokenRefresh();
+      setIsDevMode(user.isDevMode || false);
+      
+      if (!user.isDevMode) {
+        setupTokenRefresh();
+      }
     } catch (err) {
       setError('Login failed');
       throw err;
@@ -113,20 +141,15 @@ export const AuthProvider = ({ children }) => {
   };
 
   /**
-   * Sign up a new user
+   * Sign up a new user (legacy method - now handled in components)
    * @param {Object} data - User registration data
-   * @param {string} data.role - User role ("admin" or "normal_user")
-   * @param {string} [data.adminType] - Admin type (for role: "admin")
-   * @param {string} [data.normalUserType] - Normal user type (for role: "normal_user")
-   * @param {string} data.name - User name
-   * @param {string} data.email - User email
-   * @param {string} data.password - User password
    */
   const signup = async (data) => {
     try {
       const response = await axios.post(`${process.env.REACT_APP_API_URL}/auth/signup`, data);
       const { access_token, user } = response.data;
       localStorage.setItem('authToken', access_token);
+      localStorage.setItem('currentUser', JSON.stringify(user));
       axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
       setCurrentUser(user);
       setupTokenRefresh();
@@ -141,16 +164,20 @@ export const AuthProvider = ({ children }) => {
    */
   const logout = async () => {
     try {
-      if (currentUser) {
+      if (currentUser && !isDevMode) {
         await axios.post(`${process.env.REACT_APP_API_URL}/auth/logout`);
       }
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
       localStorage.removeItem('authToken');
+      localStorage.removeItem('currentUser');
       delete axios.defaults.headers.common['Authorization'];
       setCurrentUser(null);
-      clearTimeout(window.refreshTimeout);
+      setIsDevMode(false);
+      if (window.refreshTimeout) {
+        clearTimeout(window.refreshTimeout);
+      }
     }
   };
 
@@ -161,7 +188,8 @@ export const AuthProvider = ({ children }) => {
     login,
     signup,
     logout,
-    isAuthenticated: !!currentUser
+    isAuthenticated: !!currentUser,
+    isDevMode
   };
 
   return (

@@ -1,7 +1,42 @@
 import axios from 'axios';
 
+// Default users for development phase
+const DEFAULT_USERS = [
+  {
+    id: 1,
+    email: 'admin@pau.edu.ng',
+    password: 'Admin123',
+    firstName: 'Admin',
+    lastName: 'User',
+    role: 'admin',
+    studentId: 'ADM12345',
+    isActive: true
+  },
+  {
+    id: 2,
+    email: 'student@pau.edu.ng',
+    password: 'Student123',
+    firstName: 'John',
+    lastName: 'Doe',
+    role: 'student',
+    studentId: 'STU12345',
+    isActive: true
+  },
+  {
+    id: 3,
+    email: 'jane.smith@pau.edu.ng',
+    password: 'Student456',
+    firstName: 'Jane',
+    lastName: 'Smith',
+    role: 'student',
+    studentId: 'STU12346',
+    isActive: true
+  }
+];
+
 /**
  * Auth service for handling authentication-related API calls
+ * Includes fallback to default users for development phase
  */
 const AuthService = {
   /**
@@ -10,17 +45,55 @@ const AuthService = {
   API_URL: process.env.REACT_APP_API_URL,
 
   /**
+   * Check if we're in development mode (backend unavailable)
+   */
+  isDevMode: false,
+
+  /**
+   * Authenticate with default users (dev mode)
+   * @param {string} email - User email
+   * @param {string} password - User password
+   * @returns {Object|null} - Authentication result or null
+   */
+  authenticateWithDefaults: (email, password) => {
+    const user = DEFAULT_USERS.find(u => u.email === email && u.password === password);
+    if (user) {
+      return {
+        access_token: `dev_token_${user.id}_${Date.now()}`,
+        user: { ...user, isDevMode: true }
+      };
+    }
+    return null;
+  },
+
+  /**
    * Login user with email and password
    * @param {string} email - User email address
    * @param {string} password - User password
    * @returns {Promise} Promise with response data containing token and user info
    */
   login: async (email, password) => {
-    const response = await axios.post(`${process.env.REACT_APP_API_URL}/auth/login`, {
-      email,
-      password
-    });
-    return response.data;
+    try {
+      // Try backend first
+      const response = await axios.post(`${AuthService.API_URL}/auth/login`, {
+        email,
+        password
+      });
+      AuthService.isDevMode = false;
+      return response.data;
+    } catch (error) {
+      // If backend fails, try default authentication
+      console.warn('Backend login failed, trying default users...', error.message);
+      
+      const defaultAuth = AuthService.authenticateWithDefaults(email, password);
+      if (defaultAuth) {
+        AuthService.isDevMode = true;
+        return defaultAuth;
+      }
+      
+      // If both fail, throw error
+      throw new Error('Invalid credentials');
+    }
   },
 
   /**
@@ -28,15 +101,27 @@ const AuthService = {
    * @returns {Promise} Promise with logout result
    */
   logout: async () => {
-    return await axios.post(`${process.env.REACT_APP_API_URL}/auth/logout`);
+    if (!AuthService.isDevMode) {
+      try {
+        return await axios.post(`${AuthService.API_URL}/auth/logout`);
+      } catch (error) {
+        console.warn('Backend logout failed:', error.message);
+      }
+    }
+    // For dev mode, just resolve
+    return Promise.resolve();
   },
 
   /**
-   * Refresh authentication token
+   * Refresh authentication token (backend only)
    * @returns {Promise} Promise with new token
    */
   refreshToken: async () => {
-    const response = await axios.post(`${process.env.REACT_APP_API_URL}/auth/refresh`);
+    if (AuthService.isDevMode) {
+      throw new Error('Token refresh not available in dev mode');
+    }
+    
+    const response = await axios.post(`${AuthService.API_URL}/auth/refresh`);
     return response.data;
   },
 
@@ -46,10 +131,32 @@ const AuthService = {
    * @returns {Promise} Promise with verification result
    */
   verifyToken: async (token) => {
-    const response = await axios.get(`${process.env.REACT_APP_API_URL}/auth/verify`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    return response.data;
+    // Check if it's a dev mode token
+    if (token.startsWith('dev_token_')) {
+      const userData = localStorage.getItem('currentUser');
+      if (userData) {
+        try {
+          const user = JSON.parse(userData);
+          if (user.isDevMode) {
+            return { isValid: true, role: user.role, user };
+          }
+        } catch (error) {
+          return { isValid: false };
+        }
+      }
+      return { isValid: false };
+    }
+    
+    // Try backend verification
+    try {
+      const response = await axios.get(`${AuthService.API_URL}/auth/verify`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      AuthService.isDevMode = false;
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
   },
 
   /**
@@ -57,7 +164,15 @@ const AuthService = {
    * @returns {Promise} Promise with user profile data
    */
   getUserProfile: async () => {
-    const response = await axios.get(`${process.env.REACT_APP_API_URL}/auth/profile`);
+    if (AuthService.isDevMode) {
+      const userData = localStorage.getItem('currentUser');
+      if (userData) {
+        return JSON.parse(userData);
+      }
+      throw new Error('No user data found');
+    }
+    
+    const response = await axios.get(`${AuthService.API_URL}/auth/profile`);
     return response.data;
   },
 
@@ -67,7 +182,20 @@ const AuthService = {
    * @returns {Promise} Promise with reset initialization result
    */
   forgotPassword: async (email) => {
-    const response = await axios.post(`${process.env.REACT_APP_API_URL}/auth/forgot-password`, { email });
+    if (AuthService.isDevMode) {
+      // Simulate password reset in dev mode
+      const user = DEFAULT_USERS.find(u => u.email === email);
+      if (user) {
+        return { 
+          message: 'Password reset email sent (simulated in dev mode)',
+          success: true 
+        };
+      } else {
+        throw new Error('Email not found');
+      }
+    }
+    
+    const response = await axios.post(`${AuthService.API_URL}/auth/forgot-password`, { email });
     return response.data;
   },
 
@@ -78,7 +206,15 @@ const AuthService = {
    * @returns {Promise} Promise with password reset result
    */
   resetPassword: async (token, password) => {
-    const response = await axios.post(`${process.env.REACT_APP_API_URL}/auth/reset-password`, {
+    if (AuthService.isDevMode) {
+      // Simulate password reset in dev mode
+      return { 
+        message: 'Password reset successful (simulated in dev mode)',
+        success: true 
+      };
+    }
+    
+    const response = await axios.post(`${AuthService.API_URL}/auth/reset-password`, {
       token,
       password
     });
@@ -110,6 +246,11 @@ const AuthService = {
       async (error) => {
         const originalRequest = error.config;
         
+        // Skip retry for dev mode tokens
+        if (AuthService.isDevMode) {
+          return Promise.reject(error);
+        }
+        
         // If error is 401 Unauthorized and we haven't tried refreshing yet
         if (error.response?.status === 401 && !originalRequest._retry) {
           originalRequest._retry = true;
@@ -139,6 +280,19 @@ const AuthService = {
         return Promise.reject(error);
       }
     );
+  },
+
+  /**
+   * Get default users for development (useful for testing)
+   * @returns {Array} Array of default users
+   */
+  getDefaultUsers: () => {
+    return DEFAULT_USERS.map(user => ({
+      email: user.email,
+      role: user.role,
+      firstName: user.firstName,
+      lastName: user.lastName
+    }));
   }
 };
 

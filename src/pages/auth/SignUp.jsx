@@ -5,31 +5,69 @@ import { useAuth } from '../../contexts/AuthContext';
 import logo from '../../assets/logo.jpeg';
 import './Login.css'; // Reusing the same CSS styles
 
+// Default storage for dev mode users
+let DEFAULT_USERS_STORAGE = [
+  {
+    id: 1,
+    email: 'admin@pau.edu.ng',
+    password: 'Admin123',
+    name: 'Admin User',
+    role: 'admin',
+    normalType: 'admin',
+    studentId: 'ADM12345',
+    isActive: true,
+    isDevMode: true
+  },
+  {
+    id: 2,
+    email: 'student@pau.edu.ng',
+    password: 'Student123',
+    name: 'John Doe',
+    role: 'normal_user',
+    adminType: 'student_affairs',
+    normalType: 'student',
+    studentId: 'STU12345',
+    isActive: true,
+    isDevMode: true
+  },
+  {
+    id: 3,
+    email: 'jane.smith@pau.edu.ng',
+    password: 'Student456',
+    name: 'Jane Smith',
+    role: 'normal_user',
+    adminType: 'student_affairs',
+    normalType: 'student',
+    studentId: 'STU12346',
+    isActive: true,
+    isDevMode: true
+  }
+];
+
 /**
  * Signup Component
  * 
  * Handles user registration through the signup process:
- * - Email, password, and personal information validation
- * - Registration with backend API
+ * - Email, password, name, and role validation
+ * - Registration with backend API (with fallback to default storage)
  * - Error handling and user feedback
- * - Email verification process
+ * - Email verification process (simulated in dev mode)
  */
 const Signup = () => {
   // State for form inputs and errors
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
+    name: '',
     email: '',
     password: '',
     confirmPassword: '',
-    studentId: '',
-    role: 'student' // Default role
+    normalType: 'student' // Default to student
   });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isDevMode, setIsDevMode] = useState(false);
 
   // Get authentication context and navigation
   const { currentUser } = useAuth();
@@ -109,25 +147,6 @@ const Signup = () => {
   };
 
   /**
-   * Validate student ID format
-   * @param {string} studentId - Student ID to validate
-   * @returns {boolean} - Whether student ID is valid
-   */
-  const validateStudentId = (studentId) => {
-    // PAU student ID format: 3 letters + 5 numbers (e.g., STU12345)
-    const studentIdPattern = /^[A-Z]{3}\d{5}$/;
-    
-    if (!studentIdPattern.test(studentId)) {
-      setErrors(prev => ({
-        ...prev,
-        studentId: 'Student ID must be in format: ABC12345 (3 letters + 5 numbers)'
-      }));
-      return false;
-    }
-    return true;
-  };
-
-  /**
    * Validate form inputs
    * @returns {boolean} - Whether form is valid
    */
@@ -135,12 +154,8 @@ const Signup = () => {
     const newErrors = {};
 
     // Required field validation
-    if (!formData.firstName.trim()) {
-      newErrors.firstName = 'First name is required';
-    }
-
-    if (!formData.lastName.trim()) {
-      newErrors.lastName = 'Last name is required';
+    if (!formData.name.trim()) {
+      newErrors.name = 'Full name is required';
     }
 
     if (!formData.email.trim()) {
@@ -161,14 +176,62 @@ const Signup = () => {
       newErrors.confirmPassword = 'Passwords do not match';
     }
 
-    if (!formData.studentId.trim()) {
-      newErrors.studentId = 'Student ID is required';
-    } else if (!validateStudentId(formData.studentId.toUpperCase())) {
-      return false;
+    if (!formData.normalType) {
+      newErrors.normalType = 'Please select a role';
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  /**
+   * Generate auto student ID for dev mode
+   * @param {string} normalType - User type
+   * @returns {string} - Generated student ID
+   */
+  const generateStudentId = (normalType) => {
+    const prefix = {
+      'student': 'STU',
+      'club': 'CLB',
+      'lecturers': 'LEC'
+    }[normalType] || 'USR';
+    
+    const randomNumber = Math.floor(10000 + Math.random() * 90000);
+    return `${prefix}${randomNumber}`;
+  };
+
+  /**
+   * Create user with default storage (dev mode)
+   * @param {Object} userData - User data to store
+   * @returns {Object} - Created user with token
+   */
+  const createUserWithDefaults = (userData) => {
+    // Check if user already exists
+    const existingUser = DEFAULT_USERS_STORAGE.find(
+      u => u.email === userData.email
+    );
+    
+    if (existingUser) {
+      throw new Error('User with this email already exists');
+    }
+    
+    // Create new user with auto-generated student ID
+    const newUser = {
+      id: DEFAULT_USERS_STORAGE.length + 1,
+      ...userData,
+      studentId: generateStudentId(userData.normalType),
+      isActive: true,
+      isDevMode: true,
+      createdAt: new Date().toISOString()
+    };
+    
+    // Add to storage
+    DEFAULT_USERS_STORAGE.push(newUser);
+    
+    return {
+      access_token: `dev_token_${newUser.id}_${Date.now()}`,
+      user: newUser
+    };
   };
 
   /**
@@ -189,90 +252,90 @@ const Signup = () => {
     setIsLoading(true);
     
     try {
-      // Prepare signup data
+      // Prepare signup data according to the exact backend requirements
       const signupData = {
-        firstName: formData.firstName.trim(),
-        lastName: formData.lastName.trim(),
+        role: "normal_user",
+        adminType: "student_affairs", // Always set to student_affairs as requested
+        normalType: formData.normalType,
+        name: formData.name.trim(),
         email: formData.email.toLowerCase().trim(),
-        password: formData.password,
-        studentId: formData.studentId.toUpperCase().trim(),
-        role: formData.role
+        password: formData.password
       };
 
-      // Attempt signup with backend
-      const response = await axios.post(`${process.env.REACT_APP_API_URL}/auth/signup`, signupData);
-      console.error('Signup response:', response.data);
-      setIsLoading(false);
-      
-      // Handle successful signup
-      setMessage({
-        text: 'Account created successfully! Please check your email to verify your account.',
-        type: 'success'
-      });
-      
-      // Clear form
-      setFormData({
-        firstName: '',
-        lastName: '',
-        email: '',
-        password: '',
-        confirmPassword: '',
-        studentId: '',
-        role: 'student'
-      });
-      
-      // Redirect to login after delay
-      setTimeout(() => {
-        navigate('/login');
-      }, 3000);
+      try {
+        // First, try to signup with backend
+        const response = await axios.post(`${process.env.REACT_APP_API_URL}/auth/signup`, signupData);
+        
+        setIsLoading(false);
+        
+        // Handle successful backend signup
+        console.log('Backend signup successful:', response.data);
+        setMessage({
+          text: 'Account created successfully! Please check your email to verify your account.',
+          type: 'success'
+        });
+        
+        // Clear form
+        setFormData({
+          name: '',
+          email: '',
+          password: '',
+          confirmPassword: '',
+          normalType: 'student'
+        });
+        
+        // Redirect to login after delay
+        setTimeout(() => {
+          navigate('/login');
+        }, 3000);
+        
+      } catch (backendError) {
+        // If backend fails, use default storage
+        console.warn('Backend signup failed, using default storage...', backendError.message);
+        
+        try {
+          const defaultSignup = createUserWithDefaults(signupData);
+          setIsDevMode(true);
+          setIsLoading(false);
+          
+          // Handle successful default signup
+          console.log('Default signup successful:', defaultSignup);
+          setMessage({
+            text: 'Account created successfully (Dev Mode)! You can now log in.',
+            type: 'success'
+          });
+          
+          // Clear form
+          setFormData({
+            name: '',
+            email: '',
+            password: '',
+            confirmPassword: '',
+            normalType: 'student'
+          });
+          
+          // Redirect to login after delay
+          setTimeout(() => {
+            navigate('/login');
+          }, 2000);
+          
+        } catch (defaultError) {
+          setIsLoading(false);
+          setMessage({
+            text: defaultError.message,
+            type: 'error'
+          });
+        }
+      }
       
     } catch (error) {
       setIsLoading(false);
       
-      // Handle different error cases
-      if (error.response) {
-        const { status, data } = error.response;
-        
-        switch (status) {
-          case 400:
-            // Bad request - validation errors
-            if (data.errors) {
-              setErrors(data.errors);
-            } else {
-              setMessage({
-                text: data.message || 'Please check your input and try again.',
-                type: 'error'
-              });
-            }
-            break;
-          case 409:
-            // Conflict - user already exists
-            setMessage({
-              text: 'An account with this email or student ID already exists.',
-              type: 'error'
-            });
-            break;
-          case 422:
-            // Unprocessable entity - validation failed
-            setMessage({
-              text: data.message || 'Please check your information and try again.',
-              type: 'error'
-            });
-            break;
-          default:
-            // Other server errors
-            setMessage({
-              text: data.message || 'An error occurred during signup. Please try again.',
-              type: 'error'
-            });
-        }
-      } else {
-        // Network or other errors
-        setMessage({
-          text: 'Unable to connect to the server. Please check your connection.',
-          type: 'error'
-        });
-      }
+      // Handle validation or other errors
+      setMessage({
+        text: 'An unexpected error occurred. Please try again.',
+        type: 'error'
+      });
     }
   };
 
@@ -291,39 +354,39 @@ const Signup = () => {
         <div className="sidebar-content">
           <h1>Join Us!</h1>
           <p>Create your account to start booking classrooms at Pan-Atlantic University.</p>
+          {isDevMode && (
+            <div style={{ 
+              marginTop: '1rem', 
+              padding: '0.5rem', 
+              backgroundColor: '#e8f4fd', 
+              borderRadius: '4px',
+              fontSize: '0.8rem',
+              border: '1px solid #bee5eb'
+            }}>
+              <strong>Dev Mode Active</strong>
+              <br />
+              Backend unavailable - using local storage
+            </div>
+          )}
         </div>
       </div>
       
       {/* Signup form */}
       <div className="form-container">
         <form id="signupForm" className="form active" onSubmit={handleSubmit}>
-          {/* Name inputs */}
+          {/* Full Name input */}
           <div className="input-group">
-            <label htmlFor="firstName">First Name</label>
+            <label htmlFor="name">Full Name</label>
             <input 
               type="text" 
-              id="firstName" 
-              name="firstName"
-              placeholder="Enter your first name" 
-              value={formData.firstName}
+              id="name" 
+              name="name"
+              placeholder="Enter your full name" 
+              value={formData.name}
               onChange={handleInputChange}
               required 
             />
-            {errors.firstName && <p className="error-message visible">{errors.firstName}</p>}
-          </div>
-
-          <div className="input-group">
-            <label htmlFor="lastName">Last Name</label>
-            <input 
-              type="text" 
-              id="lastName" 
-              name="lastName"
-              placeholder="Enter your last name" 
-              value={formData.lastName}
-              onChange={handleInputChange}
-              required 
-            />
-            {errors.lastName && <p className="error-message visible">{errors.lastName}</p>}
+            {errors.name && <p className="error-message visible">{errors.name}</p>}
           </div>
           
           {/* Email input */}
@@ -341,21 +404,30 @@ const Signup = () => {
             {errors.email && <p className="error-message visible">{errors.email}</p>}
           </div>
 
-          {/* Student ID input */}
+          {/* Role dropdown */}
           <div className="input-group">
-            <label htmlFor="studentId">Student ID</label>
-            <input 
-              type="text" 
-              id="studentId" 
-              name="studentId"
-              placeholder="e.g., STU12345" 
-              value={formData.studentId}
+            <label htmlFor="normalType">Role</label>
+            <select 
+              id="normalType" 
+              name="normalType"
+              value={formData.normalType}
               onChange={handleInputChange}
-              maxLength="8"
-              style={{ textTransform: 'uppercase' }}
               required 
-            />
-            {errors.studentId && <p className="error-message visible">{errors.studentId}</p>}
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                fontSize: '16px',
+                backgroundColor: 'white'
+              }}
+            >
+              <option value="">Select your role</option>
+              <option value="student">Student</option>
+              <option value="club">Club</option>
+              <option value="lecturers">Lecturer</option>
+            </select>
+            {errors.normalType && <p className="error-message visible">{errors.normalType}</p>}
           </div>
           
           {/* Password input */}

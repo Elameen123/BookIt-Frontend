@@ -3,10 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@craco/craco": "^7.1.0",
-    "@testing-library/dom": "^10.4.0",
     "axios": "^1.11.0",
-    "craco-alias": "^3.0.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^6.30.1",
@@ -14,13 +11,13 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-  "start": "set NODE_OPTIONS=--openssl-legacy-provider && craco start",
-  "build": "set NODE_OPTIONS=--openssl-legacy-provider && craco build",
-  "test": "craco test",
-  "test:coverage": "craco test --coverage --watchAll=false",
-  "test:ci": "craco test --watchAll=false --passWithNoTests",
-  "eject": "craco eject"
-},
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "test:coverage": "react-scripts test --coverage --watchAll=false",
+    "test:ci": "react-scripts test --watchAll=false --passWithNoTests",
+    "eject": "react-scripts eject"
+  },
   "eslintConfig": {
     "extends": [
       "react-app",
