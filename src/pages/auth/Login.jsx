@@ -34,17 +34,14 @@ const Login = () => {
       const token = localStorage.getItem('authToken');
       if (token) {
         try {
-          // Verify token validity with backend
           const response = await axios.get(`${process.env.REACT_APP_API_URL}/auth/verify`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           
           if (response.data.isValid) {
-            // Redirect to appropriate dashboard based on user role
             navigate(response.data.role === 'admin' ? '/admin/dashboard' : '/dashboard');
           }
         } catch (error) {
-          // Token invalid or expired, clear it
           localStorage.removeItem('authToken');
         }
       }
@@ -59,7 +56,6 @@ const Login = () => {
    * @returns {boolean} - Whether email is valid
    */
   const validateEmail = (email) => {
-    // Check if it's a PAU email
     if (!email.endsWith('@pau.edu.ng')) {
       setErrors(prev => ({
         ...prev,
@@ -96,13 +92,9 @@ const Login = () => {
       });
       
       // Handle successful login
-      const { token, user } = response.data;
-      
-      // Store token in localStorage (will be better handled by httpOnly cookies in production)
+      const { access_token: token, user } = response.data; // Match API response
       localStorage.setItem('authToken', token);
-      
-      // Update auth context
-      login(user);
+      await login(user); // Update auth context
       
       // Show success message
       setMessage({
@@ -118,38 +110,32 @@ const Login = () => {
     } catch (error) {
       setIsLoading(false);
       
-      // Handle different error cases
       if (error.response) {
         const { status, data } = error.response;
         
         switch (status) {
           case 401:
-            // Unauthorized - wrong credentials
             setErrors({ password: data.message || 'Invalid credentials' });
             break;
           case 404:
-            // User not found
             setMessage({
               text: 'Account not found. Please contact your administrator.',
               type: 'error'
             });
             break;
           case 403:
-            // Account not activated
             setMessage({
               text: data.message || 'Your account is not activated yet.',
               type: 'error'
             });
             break;
           default:
-            // Other server errors
             setMessage({
               text: data.message || 'An error occurred during login. Please try again.',
               type: 'error'
             });
         }
       } else {
-        // Network or other errors
         setMessage({
           text: 'Unable to connect to the server. Please check your connection.',
           type: 'error'
@@ -167,7 +153,6 @@ const Login = () => {
     navigate('/forgot-password');
   };
 
-
   const handleSignup = (e) => {
     e.preventDefault();
     navigate('/signup');
@@ -175,7 +160,6 @@ const Login = () => {
 
   return (
     <div className="container">
-      {/* Sidebar with logo and welcome message */}
       <div className="sidebar">
         <div className="logo-container">
           <div className="logo">
@@ -191,10 +175,8 @@ const Login = () => {
         </div>
       </div>
       
-      {/* Login form */}
       <div className="form-container">
         <form id="loginForm" className="form active" onSubmit={handleSubmit}>
-          {/* Email input */}
           <div className="input-group">
             <label htmlFor="login-email">Email Address</label>
             <input 
@@ -208,7 +190,6 @@ const Login = () => {
             {errors.email && <p className="error-message visible">{errors.email}</p>}
           </div>
           
-          {/* Password input */}
           <div className="input-group">
             <label htmlFor="login-password">Password</label>
             <input 
@@ -222,24 +203,19 @@ const Login = () => {
             {errors.password && <p className="error-message visible">{errors.password}</p>}
           </div>
 
-         <div className="links-div">
-           {/* Signup Link */}
-          <div className="forgot-pass">
-            <a href="/#" onClick={handleSignup}>Signup</a>
+          <div className="links-div">
+            <div className="forgot-pass">
+              <a href="/#" onClick={handleSignup}>Signup</a>
+            </div>
+            <div className="forgot-pass">
+              <a href="/#" onClick={handleForgotPassword}>Forgot password?</a>
+            </div>
           </div>
           
-          {/* Forgot password link */}
-          <div className="forgot-pass">
-            <a href="/#" onClick={handleForgotPassword}>Forgot password?</a>
-          </div>
-         </div>
-          
-          {/* Submit button */}
           <button type="submit" className="submit-btn" disabled={isLoading}>
             {isLoading ? 'Logging in...' : 'Log In'}
           </button>
           
-          {/* Loading spinner */}
           {isLoading && (
             <div className="loading visible">
               <div className="spinner"></div>
@@ -248,7 +224,6 @@ const Login = () => {
         </form>
       </div>
       
-      {/* Message container for notifications */}
       {message.text && (
         <div className="message-container">
           <div className={`message ${message.type}`}>
