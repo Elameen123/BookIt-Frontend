@@ -26,6 +26,8 @@ const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  // console.log('Backend API URL:', process.env.REACT_APP_API_URL);
+
   // Check if user is already authenticated
   useEffect(() => {
     const checkAuthStatus = async () => {
