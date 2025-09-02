@@ -41,6 +41,16 @@ let DEFAULT_USERS_STORAGE = [
     studentId: 'STU12346',
     isActive: true,
     isDevMode: true
+  },
+  {
+    id:4,
+    email: 'facility@pau.edu.ng',
+    password: 'Facility123',
+    firstName: 'Facility',
+    lastName: 'Staff',
+    role: 'facility',
+    studentId: 'FAC12345',
+    isActive: true
   }
 ];
 

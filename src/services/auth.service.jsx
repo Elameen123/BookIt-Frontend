@@ -31,6 +31,16 @@ const DEFAULT_USERS = [
     role: 'student',
     studentId: 'STU12346',
     isActive: true
+  },
+  {
+    id:4,
+    email: 'facility@pau.edu.ng',
+    password: 'Facility123',
+    firstName: 'Facility',
+    lastName: 'Staff',
+    role: 'facility',
+    studentId: 'FAC12345',
+    isActive: true
   }
 ];
 
