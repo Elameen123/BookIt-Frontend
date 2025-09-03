@@ -6,7 +6,8 @@ import './FacilityDashboard.css';
 
 const ROOM_STATUS = {
   AVAILABLE: 'AVAILABLE',
-  UNAVAILABLE: 'UNAVAILABLE',
+  CLEANING: 'CLEANING',
+  MAINTENANCE: 'MAINTENANCE'
 };
 
 const UTIL_STATE = {
@@ -16,7 +17,8 @@ const UTIL_STATE = {
 
 const statusMeta = {
   AVAILABLE: { label: 'Available', cls: 'bg-emerald-100 text-emerald-700' },
-  UNAVAILABLE: { label: 'Unavailable', cls: 'bg-rose-100 text-rose-700' },
+  CLEANING: { label: 'Cleaning', cls: 'bg-amber-100 text-amber-700' },
+  MAINTENANCE: { label: 'Maintenance', cls: 'bg-rose-100 text-rose-700' }
 };
 
 const utilMeta = {
@@ -73,13 +75,21 @@ function Badge({ children, className = '' }) {
 function pillClass(status) {
   switch (status) {
     case ROOM_STATUS.AVAILABLE:    return 'status-pill status-available';
-    default:                       return 'status-pill status-unavailable';
+    case ROOM_STATUS.CLEANING:     return 'status-pill status-cleaning';
+    default:                       return 'status-pill status-maintenance';
   }
 }
 
 // Room Card
 function RoomCard({ room, state, onChange }) {
   const [noteInput, setNoteInput] = useState('');
+
+  const cycleStatus = () => {
+    const order = [ROOM_STATUS.AVAILABLE, ROOM_STATUS.CLEANING, ROOM_STATUS.MAINTENANCE];
+    const idx = order.indexOf(state.status);
+    const next = order[(idx + 1) % order.length];
+    onChange({ ...state, status: next });
+  };
 
   const cycleUtil = (key) => {
     const order = [UTIL_STATE.WORKING, UTIL_STATE.FAULTY];
@@ -123,23 +133,22 @@ function RoomCard({ room, state, onChange }) {
       </div>
 
       <div className="status-actions">
-        {Object.entries(ROOM_STATUS).map(([key, val]) => (
-          <button
-            key={key}
-            onClick={() => setStatus(val)}
-            className={`status-btn ${state.status === val ? 'active' : ''}`}
-          >
-            {statusMeta[val].label}
-          </button>
-        ))}
-      </div>
+    <button
+      type="button"
+      onClick={cycleStatus}
+      className="status-btn active"
+      title="Click to cycle: Available → Cleaning → Maintenance"
+    >
+      {statusMeta[state.status].label} <h6>(click to change)</h6>
+    </button>
+  </div>
 
       <div className="note-input-row">
         <input
           className="note-input"
           value={noteInput}
           onChange={(e) => setNoteInput(e.target.value)}
-          placeholder="Add extra information..."
+          placeholder="Add any extra information..."
         />
         <button className="note-add-btn" onClick={addNote}>Add</button>
       </div>
@@ -206,7 +215,7 @@ export default function FacilityDashboard() {
   };
 
   const counts = useMemo(() => {
-    const c = { AVAILABLE: 0, UNAVAILABLE: 0 };
+    const c = { AVAILABLE: 0, CLEANING: 0, MAINTENANCE: 0 };
     for (const id of visibleRoomIds) {
       const rs = roomsState[id];
       if (rs) c[rs.status] += 1;
@@ -273,9 +282,13 @@ export default function FacilityDashboard() {
             <div className="kpi-label">Available</div>
           </div>
         </div>
-        <div className="kpi-card kpi unavailable">
-          <div className="kpi-value">{counts.UNAVAILABLE}</div>
-          <div className="kpi-label">Unavailable</div>
+        <div className="kpi-card kpi cleaning">
+          <div className="kpi-value">{counts.CLEANING}</div>
+          <div className="kpi-label">Cleaning</div>
+        </div>
+        <div className="kpi-card kpi maintenance">
+          <div className="kpi-value">{counts.MAINTENANCE}</div>
+          <div className="kpi-label">Maintenance</div>
         </div>
       </div>
         </section>
