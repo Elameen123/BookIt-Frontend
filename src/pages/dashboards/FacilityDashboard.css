@@ -199,7 +199,8 @@ body {
 }
 
 .kpi.available .kpi-value { color: #155724; }
-.kpi.unavailable .kpi-value { color: #721c24; }
+.kpi.cleaning .kpi-value { color: #721c24; }
+.kpi.maintenance .kpi-value { color: #721c24; }
 
 .section-header {
   display: flex;
@@ -261,7 +262,8 @@ body {
 }
 
 .status-available  { background-color: #d4edda; color: #155724; }
-.status-unavailable{ background-color: #f8d7da; color: #721c24; }
+.status-cleaning{ background-color: #f8d7da; color: #721c24; }
+.status-maintenance{ background-color: #f8d7da; color: #721c24; }
 
 .utilities {
   display: flex;
@@ -288,6 +290,7 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+  justify-content: center;
 }
 
 .status-btn {
@@ -378,13 +381,16 @@ body {
 }
 
 @media (max-width: 768px) {
-  .header { padding: 1rem; }
+  .header { padding: 1rem; gap: 1.5rem;}
   .user-info { display: flex; align-items: center; }
   .dashboard-container { padding: 1rem; }
-  .filter-controls { flex-direction: column; }
+  .facility-user{ font-size: x-small; }
+  .logo, .logo_differentiate{ font-size: 1.2rem;}
+  
   .rooms-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 420px) {
   .rooms-grid { grid-template-columns: 1fr; }
+  .logout-btn { font-size: 0.5rem; }
 }
